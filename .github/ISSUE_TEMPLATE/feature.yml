@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a change to Tunsmith
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tunsmith is an alpha CLI (no GUI, no CRL in 0.1.0).
+        Describe the problem first. Do not paste private keys.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do with the current commands?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: How should the CLI behave? Name the command if you have one in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds or other designs you already rejected.
+    validations:
+      required: false

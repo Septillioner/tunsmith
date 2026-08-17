@@ -1,0 +1,28 @@
+[package]
+name = "tunsmith"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+description = "Strike an OpenVPN PKI. Deploy it over SSH."
+readme = "README.md"
+keywords = ["openvpn", "pki", "vpn", "cli"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "tunsmith"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+dialoguer = "0.11"
+dirs = "5"
+rand = "0.8"
+rcgen = { version = "0.14", features = ["x509-parser"] }
+rsa = { version = "0.9", features = ["pem"] }
+russh = "0.52"
+russh-sftp = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "fs", "io-util"] }

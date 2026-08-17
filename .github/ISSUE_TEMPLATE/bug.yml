@@ -1,0 +1,71 @@
+name: Bug report
+description: Report a defect in Tunsmith
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do **not** paste private keys, CA material, or full `.ovpn` profiles.
+        Those files embed secrets. Redact hostnames and IPs if they are sensitive.
+        Security issues belong in SECURITY.md, not a public bug.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened
+      description: What did you run, and what went wrong?
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      description: The machine that ran `tunsmith` (and the VPN host if this is a remote issue).
+      placeholder: "Windows 10 / Debian 12 / Ubuntu 24.04"
+    validations:
+      required: true
+  - type: input
+    id: openvpn-version
+    attributes:
+      label: OpenVPN version
+      description: On the VPN server (or client, if the failure is import/connect). Use `unknown` if not installed yet.
+      placeholder: "2.6.x / unknown"
+    validations:
+      required: true
+  - type: input
+    id: tunsmith-version
+    attributes:
+      label: Tunsmith version
+      description: Output of `tunsmith --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: keys-shared
+    attributes:
+      label: Did you share private keys?
+      description: Never paste `pki/**/*.key`, `tls-crypt.key`, or a unified `.ovpn` into this issue.
+      options:
+        - "No. I did not paste or attach private keys."
+        - "Yes. I already posted secrets and will rotate the CA / clients."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands only. No key material.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Error text is fine. Strip PEMs and passwords.
+    validations:
+      required: true

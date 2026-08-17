@@ -1,0 +1,36 @@
+# Rust
+/target/
+
+# Environment and OS
+**/.env
+**/.DS_Store
+Thumbs.db
+.DS_Store
+
+# Logs
+**/logs/
+**/*.log
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Coverage and temp
+**/coverage/
+**/tmp/
+**/temp/
+
+# CLI working artifacts (generated at runtime)
+pki/
+PKI/
+tunsmith.json
+tunforge.json
+linet.json
+remotes/
+dist/
+.cursor
+PMAP.md
+reference/
+manual-fixtures/

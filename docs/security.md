@@ -38,7 +38,7 @@ On Unix, secret files are created with mode `600`. Backup `pki/` as you would an
 
 ## OpenVPN
 
-Configs use AES-256-GCM, SHA384, TLS-Crypt, and `dh none` (ECDHE). Compression is off. Full-tunnel mode (`redirect_gateway`) does **not** configure NAT; you must add masquerade yourself.
+Configs use AES-256-GCM, SHA384, TLS-Crypt, and `dh none` (ECDHE). Compression is off. Full-tunnel mode (`redirect_gateway`) can install iptables MASQUERADE + FORWARD after an interactive Confirm (default no). Rules are tagged `tunsmith:<instance>`. UFW policy and cloud security groups are not rewritten.
 
 `preview ssh` may call `curl https://ifconfig.me` on the remote host to print a public IP.
 

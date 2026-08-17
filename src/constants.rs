@@ -61,6 +61,15 @@ pub const REMOTE_OPENVPN_SERVER_DIR: &str = "/etc/openvpn/server";
 pub const SYSCTL_CONF: &str = "/etc/sysctl.conf";
 pub const JOURNAL_TAIL_LINES: u32 = 20;
 pub const REMOTE_FILE_MODE: &str = "600";
+pub const REMOTE_SCRIPT_MODE: &str = "700";
+pub const REMOTE_UNIT_MODE: &str = "644";
+pub const NAT_COMMENT_PREFIX: &str = "tunsmith:";
+pub const NAT_TUN_MATCH: &str = "tun+";
+pub const NAT_SCRIPT_NAME: &str = "nat.sh";
+pub const NAT_DOWN_SCRIPT_NAME: &str = "nat-down.sh";
+pub const NAT_SYSTEMD_TEMPLATE: &str = "tunsmith-nat@.service";
+pub const NAT_SYSTEMD_UNIT_DIR: &str = "/etc/systemd/system";
+pub const IFACE_NAME_MAX: usize = 15;
 
 pub const DEFAULT_DNS_PRIMARY: &str = "8.8.8.8";
 pub const DEFAULT_DNS_SECONDARY: &str = "8.8.4.4";

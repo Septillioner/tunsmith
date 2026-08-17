@@ -52,7 +52,16 @@ Other distros error with “Unsupported OS … Install OpenVPN manually.” Ther
 sysctl -w net.ipv4.ip_forward=1
 ```
 
-Then existing `net.ipv4.ip_forward` lines are deleted from `/etc/sysctl.conf` and `net.ipv4.ip_forward=1` is appended. Split-tunnel projects skip this. NAT is still not configured; see [getting-started.md](getting-started.md).
+Then existing `net.ipv4.ip_forward` lines are deleted from `/etc/sysctl.conf` and `net.ipv4.ip_forward=1` is appended. Split-tunnel projects skip this.
+
+**NAT** — only when `redirect_gateway` is true, and only after Confirm (default no). Tunsmith parses `ip -4 route show default` (never guesses `eth0`):
+
+- One `dev`: UPPERCASE warning with iface and subnet, then Confirm.
+- Several (or none): `--nat-interface` or an interactive Select. Flag does not skip Confirm. No TTY without a flag: error (several/none) or skip NAT (one iface).
+- Yes: idempotent iptables MASQUERADE + FORWARD tagged `tunsmith:<instance>`, scripts in `/etc/openvpn/server/<instance>/nat.sh`, oneshot `tunsmith-nat@<instance>.service`.
+- No: setup continues without internet for full-tunnel clients.
+
+If UFW is active, Tunsmith still applies iptables and warns that `DEFAULT_FORWARD_POLICY=DROP` may drop forwarded packets. It does not edit `/etc/default/ufw`. Cloud security groups stay yours.
 
 **Files** — from `dist/server/` to `/etc/openvpn/server/<instance>/`:
 
@@ -79,9 +88,9 @@ If `systemctl is-active` is not `active`, Tunsmith prints the last 20 lines of `
 
 ## `remote update ssh` / `remote clean ssh`
 
-Update uploads only `server.conf` and restarts the unit. Certificates on the server are left as they were. The same live-version gate as `setup` runs first.
+Update uploads only `server.conf` and restarts the unit. Certificates on the server are left as they were. The same live-version gate as `setup` runs first. If `redirect_gateway` is on, NAT Confirm runs again (idempotent apply).
 
-Clean stops and disables that unit, deletes `/etc/openvpn/server/<instance>.conf` and `/etc/openvpn/server/<instance>/`, and clears `setup` in the profile. It does not `apt-get remove openvpn`, does not edit sysctl back, and does not delete `remotes/<host>.json`. Confirmation prompt defaults to no.
+Clean stops NAT (`tunsmith-nat@<instance>`) and the OpenVPN unit, deletes `/etc/openvpn/server/<instance>.conf` and `/etc/openvpn/server/<instance>/` (including `nat.sh`), and clears `setup` in the profile. It does not `apt-get remove openvpn`, does not revert sysctl, does not flush the whole NAT table, and does not delete `remotes/<host>.json`. Confirmation prompt defaults to no.
 
 ## `preview ssh`
 

@@ -6,6 +6,10 @@ OpenVPN still needs a CA, server and client certificates, a `server.conf`, and a
 
 This is **0.1.0**. Treat it as alpha. Private keys are written unencrypted. Read [docs/security.md](docs/security.md) before using it on a real host.
 
+## Start here
+
+Have an Ubuntu VPS and want your traffic to leave from that box? Follow [Your own internet VPN on Ubuntu](docs/ubuntu-internet-vpn.md).
+
 ## Install
 
 Requires a Rust toolchain. For `remote` commands: a Debian or Ubuntu host with SSH. OpenVPN 2.4+ is the expected floor on that host (Tunsmith can install the distro package; it does not pin a version). See [Compatibility](#compatibility). No OpenSSL CLI. Keys are RSA + `rcgen`. VPN configs use `dh none`.
@@ -51,7 +55,7 @@ tunsmith build
 tunsmith remote setup ssh root@203.0.113.10
 ```
 
-`build` writes `dist/server/`, `dist/clients/*.ovpn`, and `dist/build.json`. Default OpenVPN version comes from `preview ssh` (`remotes/<host>.json`); override with `build --openvpn-version X.Y`. Import the `.ovpn` on the client. If you enabled full-tunnel (`redirect_gateway`), you still need NAT on the server; Tunsmith prints an `iptables` example and does not apply it.
+`build` writes `dist/server/`, `dist/clients/*.ovpn`, and `dist/build.json`. Default OpenVPN version comes from `preview ssh` (`remotes/<host>.json`); override with `build --openvpn-version X.Y`. Import the `.ovpn` on the client. Full-tunnel (`redirect_gateway`) asks to apply NAT on `remote setup` / `update` (Confirm, default no).
 
 ## Commands
 
@@ -86,6 +90,7 @@ Those paths are in `.gitignore`. Do not commit `pki/` or `dist/clients/*.ovpn`.
 
 Index: [docs/README.md](docs/README.md).
 
+- [Your own internet VPN on Ubuntu](docs/ubuntu-internet-vpn.md) — full tunnel on your VPS (`gateway-vpn`)
 - [Getting started](docs/getting-started.md) — install, init, first build, NAT
 - [Commands](docs/commands.md) — CLI reference
 - [PKI](docs/pki.md) — certificates, `pki/` layout, revocation gap

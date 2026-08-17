@@ -1,5 +1,7 @@
 # Getting started
 
+Full-tunnel internet through your own Ubuntu VPS: [ubuntu-internet-vpn.md](ubuntu-internet-vpn.md).
+
 Requires a Rust toolchain. Remote commands also need a Debian or Ubuntu host with SSH. OpenVPN 2.4+ on that host (Tunsmith can install it). There is no OpenSSL CLI dependency; keys are RSA via `rcgen`. VPN configs use `dh none`.
 
 ## Install
@@ -89,15 +91,11 @@ Those paths are gitignored. Do not commit `pki/` or `dist/clients/*.ovpn`.
 
 `redirect_gateway` (templates `gateway-vpn` and `gateway-cloud-vpn`, or `config set --redirect`) pushes `redirect-gateway def1 bypass-dhcp` so clients send all IPv4 through the VPN.
 
-`remote setup` will enable IPv4 forwarding on the host (`sysctl` + `/etc/sysctl.conf`). It does **not** configure NAT. Without masquerade, clients typically reach the VPN subnet and nothing else.
+`remote setup` / `remote update` enable IPv4 forwarding (`sysctl` + `/etc/sysctl.conf`) and, after you confirm, apply iptables MASQUERADE + FORWARD on the default IPv4 egress interface. One interface: an UPPERCASE warning, then Confirm (default no). Several default routes: pick with `--nat-interface` or a prompt; Confirm still runs. No TTY: NAT is not applied.
 
-Tunsmith prints an example and stops:
+NAT is tagged `tunsmith:<instance>` and persisted by `tunsmith-nat@<instance>.service`. `remote clean ssh` removes those rules only. It does not rewrite UFW policy or cloud security groups. UDP/TCP 1194 is still on you.
 
-```text
-iptables -t nat -A POSTROUTING -s <subnet> -o eth0 -j MASQUERADE
-```
-
-Replace `eth0` with the server's public interface. Persist that rule yourself (iptables-persistent, nftables, cloud security groups, and UDP/TCP 1194 are all outside Tunsmith).
+If you decline Confirm, OpenVPN still starts; clients typically reach the VPN subnet and not the internet.
 
 ## Next
 

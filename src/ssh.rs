@@ -11,7 +11,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::constants::{
     DEFAULT_SSH_KEY_ED25519, DEFAULT_SSH_KEY_RSA, DEFAULT_SSH_PORT, JOURNAL_TAIL_LINES,
-    KNOWN_HOSTS_FILE, REMOTE_FILE_MODE,
+    KNOWN_HOSTS_FILE, REMOTE_FILE_MODE, REMOTE_SCRIPT_MODE, REMOTE_UNIT_MODE,
 };
 use crate::project::AUTH_TYPE_PASSWORD;
 use crate::style;
@@ -121,6 +121,13 @@ impl RemoteSession {
     pub async fn upload_file(&self, local: &Path, remote: &str) -> Result<()> {
         let bytes =
             std::fs::read(local).with_context(|| format!("failed to read {}", local.display()))?;
+        self.upload_bytes(&bytes, remote, REMOTE_FILE_MODE).await
+    }
+
+    pub async fn upload_bytes(&self, bytes: &[u8], remote: &str, mode: &str) -> Result<()> {
+        if mode != REMOTE_FILE_MODE && mode != REMOTE_SCRIPT_MODE && mode != REMOTE_UNIT_MODE {
+            bail!("refusing unknown remote file mode");
+        }
         let parent = remote_parent(remote);
         self.mkdir_p(&parent).await?;
 
@@ -137,13 +144,12 @@ impl RemoteSession {
                 )
                 .await
                 .with_context(|| format!("SFTP open failed: {remote}"))?;
-            file.write_all(&bytes).await?;
+            file.write_all(bytes).await?;
             file.flush().await?;
         }
         drop(sftp);
 
-        self.execute(&format!("chmod {REMOTE_FILE_MODE} {remote}"))
-            .await?;
+        self.execute(&format!("chmod {mode} {remote}")).await?;
         Ok(())
     }
 

@@ -4,6 +4,7 @@ Tunsmith is a 0.1.0 alpha CLI (AGPL-3.0-only). It generates a local OpenVPN PKI 
 
 | Page | Contents |
 | --- | --- |
+| [Your own internet VPN on Ubuntu](ubuntu-internet-vpn.md) | Full-tunnel `gateway-vpn` on an Ubuntu VPS |
 | [Getting started](getting-started.md) | Install, `init` / `config` / `client` / `build`, files on disk, NAT |
 | [Commands](commands.md) | CLI reference: every command and flag, including `tui` |
 | [PKI](pki.md) | RSA sizes, PKCS#8, `pki/` layout, revocation gap |

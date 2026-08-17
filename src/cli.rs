@@ -186,6 +186,9 @@ pub struct SshArgs {
     /// Use password authentication instead of a key
     #[arg(long)]
     pub password: bool,
+    /// Egress interface for full-tunnel NAT. Does not skip confirmation.
+    #[arg(long)]
+    pub nat_interface: Option<String>,
 }
 
 impl Cli {

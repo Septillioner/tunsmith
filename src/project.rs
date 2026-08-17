@@ -74,6 +74,8 @@ pub struct RemoteSetup {
     pub main_config_path: String,
     pub deployed_at: String,
     pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nat_interface: Option<String>,
 }
 
 impl Default for ServerConfig {

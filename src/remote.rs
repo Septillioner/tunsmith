@@ -1,7 +1,11 @@
 use anyhow::{bail, Result};
 use std::path::Path;
 
-use crate::constants::{REMOTE_OPENVPN_SERVER_DIR, SYSCTL_CONF};
+use crate::constants::{
+    IFACE_NAME_MAX, IPV4_MAX_PREFIX, NAT_COMMENT_PREFIX, NAT_DOWN_SCRIPT_NAME, NAT_SCRIPT_NAME,
+    NAT_SYSTEMD_TEMPLATE, NAT_SYSTEMD_UNIT_DIR, NAT_TUN_MATCH, REMOTE_OPENVPN_SERVER_DIR,
+    REMOTE_SCRIPT_MODE, REMOTE_UNIT_MODE, SYSCTL_CONF,
+};
 use crate::project::now_rfc3339;
 use crate::ssh::{journal_tail_command, RemoteSession};
 
@@ -224,6 +228,96 @@ impl<'a> VpnManager<'a> {
         Ok(())
     }
 
+    pub async fn default_ipv4_ifaces(&self) -> Vec<String> {
+        let raw = self
+            .session
+            .execute_or("ip -4 route show default", "")
+            .await;
+        parse_default_route_ifaces(&raw)
+    }
+
+    pub async fn ufw_is_active(&self) -> bool {
+        let status = self
+            .session
+            .execute_or("ufw status 2>/dev/null | head -n 1", "")
+            .await;
+        status.to_ascii_lowercase().contains("status: active")
+    }
+
+    pub async fn apply_gateway_nat(
+        &self,
+        instance_name: &str,
+        subnet: &str,
+        iface: &str,
+        mut logs: impl FnMut(&str),
+    ) -> Result<()> {
+        crate::project::validate_instance_name(instance_name)?;
+        validate_iface(iface)?;
+        validate_ipv4_cidr(subnet)?;
+
+        let remote_dir = format!("{REMOTE_OPENVPN_SERVER_DIR}/{instance_name}");
+        let comment = format!("{NAT_COMMENT_PREFIX}{instance_name}");
+        let nat_sh = nat_apply_script(subnet, iface, &comment);
+        let nat_down = nat_down_script(subnet, iface, &comment);
+        let unit = nat_systemd_unit();
+
+        logs("Uploading NAT scripts...");
+        self.session
+            .upload_bytes(
+                nat_sh.as_bytes(),
+                &format!("{remote_dir}/{NAT_SCRIPT_NAME}"),
+                REMOTE_SCRIPT_MODE,
+            )
+            .await?;
+        self.session
+            .upload_bytes(
+                nat_down.as_bytes(),
+                &format!("{remote_dir}/{NAT_DOWN_SCRIPT_NAME}"),
+                REMOTE_SCRIPT_MODE,
+            )
+            .await?;
+        self.session
+            .upload_bytes(
+                unit.as_bytes(),
+                &format!("{NAT_SYSTEMD_UNIT_DIR}/{NAT_SYSTEMD_TEMPLATE}"),
+                REMOTE_UNIT_MODE,
+            )
+            .await?;
+
+        let unit_instance = format!("tunsmith-nat@{instance_name}");
+        logs(&format!("Enabling {unit_instance}..."));
+        self.session.execute("systemctl daemon-reload").await?;
+        self.session
+            .execute(&format!("systemctl enable {unit_instance}"))
+            .await?;
+        self.session
+            .execute(&format!("systemctl restart {unit_instance}"))
+            .await?;
+        logs(&format!("NAT masquerade applied on {iface} for {subnet}."));
+        Ok(())
+    }
+
+    pub async fn remove_gateway_nat(&self, instance_name: &str, mut logs: impl FnMut(&str)) {
+        if crate::project::validate_instance_name(instance_name).is_err() {
+            return;
+        }
+        let unit_instance = format!("tunsmith-nat@{instance_name}");
+        logs(&format!("Stopping {unit_instance}..."));
+        let _ = self
+            .session
+            .execute(&format!("systemctl stop {unit_instance}"))
+            .await;
+        let _ = self
+            .session
+            .execute(&format!("systemctl disable {unit_instance}"))
+            .await;
+        let down = format!("{REMOTE_OPENVPN_SERVER_DIR}/{instance_name}/{NAT_DOWN_SCRIPT_NAME}");
+        let _ = self
+            .session
+            .execute(&format!("test -x '{down}' && '{down}'"))
+            .await;
+    }
+
     pub async fn update_config(
         &self,
         instance_name: &str,
@@ -244,6 +338,8 @@ impl<'a> VpnManager<'a> {
     }
 
     pub async fn cleanup_vpn(&self, instance_name: &str, mut logs: impl FnMut(&str)) -> Result<()> {
+        self.remove_gateway_nat(instance_name, &mut logs).await;
+
         let service_name = format!("openvpn-server@{instance_name}");
         let remote_config_dir = format!("{REMOTE_OPENVPN_SERVER_DIR}/{instance_name}");
         let main_config_path = format!("{REMOTE_OPENVPN_SERVER_DIR}/{instance_name}.conf");
@@ -277,4 +373,123 @@ impl<'a> VpnManager<'a> {
 
 pub fn deployed_at() -> String {
     now_rfc3339()
+}
+
+pub fn parse_default_route_ifaces(raw: &str) -> Vec<String> {
+    let mut ifaces = Vec::new();
+    for line in raw.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        let mut index = 0;
+        while index + 1 < parts.len() {
+            if parts[index] == "dev" {
+                let name = parts[index + 1];
+                if !ifaces.iter().any(|existing| existing == name) {
+                    ifaces.push(name.to_string());
+                }
+                index += 2;
+                continue;
+            }
+            index += 1;
+        }
+    }
+    ifaces
+}
+
+pub fn validate_iface(name: &str) -> Result<()> {
+    if name.is_empty() || name.len() > IFACE_NAME_MAX {
+        bail!("invalid network interface name");
+    }
+    let valid = name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-');
+    if !valid {
+        bail!("invalid network interface name");
+    }
+    Ok(())
+}
+
+pub fn validate_ipv4_cidr(subnet: &str) -> Result<()> {
+    let (addr, prefix) = subnet
+        .split_once('/')
+        .ok_or_else(|| anyhow::anyhow!("subnet must be IPv4 CIDR, e.g. 10.8.0.0/24"))?;
+    let bits: u32 = prefix
+        .parse()
+        .map_err(|_| anyhow::anyhow!("invalid subnet prefix"))?;
+    if bits > IPV4_MAX_PREFIX {
+        bail!("invalid subnet prefix");
+    }
+    let octets: Vec<&str> = addr.split('.').collect();
+    if octets.len() != 4 {
+        bail!("invalid IPv4 subnet");
+    }
+    for octet in octets {
+        if octet.len() > 1 && octet.starts_with('0') {
+            bail!("invalid IPv4 subnet");
+        }
+        let value: u32 = octet
+            .parse()
+            .map_err(|_| anyhow::anyhow!("invalid IPv4 subnet"))?;
+        if value > 255 {
+            bail!("invalid IPv4 subnet");
+        }
+    }
+    Ok(())
+}
+
+fn nat_apply_script(subnet: &str, iface: &str, comment: &str) -> String {
+    let check_nat = iptables_nat_spec(subnet, iface, comment);
+    let check_fwd_out = iptables_forward_out(iface);
+    let check_fwd_in = iptables_forward_in(iface);
+    format!(
+        "#!/bin/sh\n\
+set -e\n\
+iptables -t nat -C {check_nat} 2>/dev/null || iptables -t nat -A {check_nat}\n\
+iptables -C {check_fwd_out} 2>/dev/null || iptables -A {check_fwd_out}\n\
+iptables -C {check_fwd_in} 2>/dev/null || iptables -A {check_fwd_in}\n"
+    )
+}
+
+fn nat_down_script(subnet: &str, iface: &str, comment: &str) -> String {
+    let check_nat = iptables_nat_spec(subnet, iface, comment);
+    let check_fwd_out = iptables_forward_out(iface);
+    let check_fwd_in = iptables_forward_in(iface);
+    format!(
+        "#!/bin/sh\n\
+iptables -t nat -C {check_nat} 2>/dev/null && iptables -t nat -D {check_nat} || true\n\
+iptables -C {check_fwd_out} 2>/dev/null && iptables -D {check_fwd_out} || true\n\
+iptables -C {check_fwd_in} 2>/dev/null && iptables -D {check_fwd_in} || true\n"
+    )
+}
+
+fn iptables_nat_spec(subnet: &str, iface: &str, comment: &str) -> String {
+    format!("POSTROUTING -s '{subnet}' -o '{iface}' -m comment --comment '{comment}' -j MASQUERADE")
+}
+
+fn iptables_forward_out(iface: &str) -> String {
+    format!("FORWARD -i '{NAT_TUN_MATCH}' -o '{iface}' -j ACCEPT")
+}
+
+fn iptables_forward_in(iface: &str) -> String {
+    format!(
+        "FORWARD -i '{iface}' -o '{NAT_TUN_MATCH}' -m state --state RELATED,ESTABLISHED -j ACCEPT"
+    )
+}
+
+fn nat_systemd_unit() -> String {
+    format!(
+        "[Unit]\n\
+Description=Tunsmith NAT masquerade for OpenVPN instance %i\n\
+After=network-online.target\n\
+Wants=network-online.target\n\
+\n\
+[Service]\n\
+Type=oneshot\n\
+RemainAfterExit=yes\n\
+ExecStart={REMOTE_OPENVPN_SERVER_DIR}/%i/{NAT_SCRIPT_NAME}\n\
+ExecStop={REMOTE_OPENVPN_SERVER_DIR}/%i/{NAT_DOWN_SCRIPT_NAME}\n\
+\n\
+[Install]\n\
+WantedBy=multi-user.target\n\
+WantedBy=openvpn-server@%i.service\n"
+    )
 }

@@ -129,6 +129,7 @@ tunsmith <command> ssh [HOST] [OPTIONS]
 | `-p`, `--port <PORT>` | `22` | SSH port. Saved profiles do not override this. |
 | `--key <PATH>` | `~/.ssh/id_ed25519` if that file exists, else `~/.ssh/id_rsa` if it exists, else `~/.ssh/id_ed25519` | Private key. `~` is expanded. Encrypted keys prompt for a passphrase. |
 | `--password` | off | Prompt for a password. Not written to disk. |
+| `--nat-interface <IFACE>` | detected default IPv4 `dev` | Egress iface for full-tunnel NAT. Does not skip Confirm. Used by `remote setup` / `update` only. |
 
 `user@host` wins over `--user`. If a `remotes/<host>.json` exists with `ssh_auth_type: "password"` and you do not pass `--key`, Tunsmith prompts for a password again. Auth details: [remote.md](remote.md).
 
@@ -141,18 +142,19 @@ SSH in, print OS / kernel / uptime / CPU / RAM / disk / public IP / local IP / I
 Runs the same discovery as `preview ssh`, then:
 
 1. Installs OpenVPN with apt if missing (Debian/Ubuntu only).
-2. If `redirect_gateway` is set, enables IPv4 forwarding.
+2. If `redirect_gateway` is set, enables IPv4 forwarding, then asks to apply NAT (UPPERCASE warning; Confirm defaults to no).
 3. Uploads `dist/server/` and enables `openvpn-server@<instance>`.
+4. If you confirmed NAT, installs `tunsmith-nat@<instance>` (MASQUERADE + FORWARD).
 
-Requires `tunsmith.json` and `dist/server/`. Prints an iptables NAT example when `redirect_gateway` is on; does not apply it.
+Requires `tunsmith.json` and `dist/server/`. `--nat-interface` selects the iface when detection is empty or ambiguous; it does not skip Confirm.
 
 ## `remote update ssh`
 
-Uploads `dist/server/server.conf` to `/etc/openvpn/server/<instance>.conf` and `systemctl restart openvpn-server@<instance>`. Does not re-upload certificates or keys. Requires an existing remote profile. If `HOST` is omitted, uses the first name in `remotes/` (sorted).
+Uploads `dist/server/server.conf` to `/etc/openvpn/server/<instance>.conf` and `systemctl restart openvpn-server@<instance>`. Does not re-upload certificates or keys. Requires an existing remote profile. If `HOST` is omitted, uses the first name in `remotes/` (sorted). If `redirect_gateway` is on, NAT Confirm runs (idempotent).
 
 ## `remote clean ssh`
 
-Prompts for confirmation, then `systemctl stop` / `disable` `openvpn-server@<instance>`, `rm -f /etc/openvpn/server/<instance>.conf`, and `rm -rf /etc/openvpn/server/<instance>/`. Does not uninstall OpenVPN or revert sysctl. Clears the `setup` field in `remotes/<host>.json`. Instance name comes from that profile if present, otherwise from `tunsmith.json`.
+Prompts for confirmation, then stops NAT (`tunsmith-nat@<instance>`), `systemctl stop` / `disable` `openvpn-server@<instance>`, `rm -f /etc/openvpn/server/<instance>.conf`, and `rm -rf /etc/openvpn/server/<instance>/`. Does not uninstall OpenVPN, revert sysctl, or flush the whole NAT table. Clears the `setup` field in `remotes/<host>.json`. Instance name comes from that profile if present, otherwise from `tunsmith.json`.
 
 ## `remote clean local`
 

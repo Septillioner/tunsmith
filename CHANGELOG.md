@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tunsmith tui`: interactive terminal menu for status, init, config, clients, and build (not a web UI; no remote)
 - OpenVPN compatibility table in README (expected 2.4+, recommended 2.6, untested until marked)
 - `build --host` and `build --openvpn-version`: default compile target from `preview` remotes; stamp `dist/build.json`; `remote setup`/`update` refuse OpenVPN below 2.4
+- `remote setup` / `update` can apply full-tunnel NAT after Confirm (default no). `--nat-interface` selects the iface; it does not skip consent.
+- Ubuntu internet VPN walkthrough (`docs/ubuntu-internet-vpn.md`) for the `gateway-vpn` VPS path
 
 ## [0.1.0] - 2026-08-17
 
@@ -36,4 +38,4 @@ Initial public Rust CLI. Alpha. Not a finished PKI product.
 - Private keys are written unencrypted
 - No certificate revocation list (CRL); `client remove` is list-only
 - No web GUI (terminal `tui` is Unreleased)
-- Full-tunnel (`redirect_gateway`) does not configure NAT
+- Full-tunnel (`redirect_gateway`) NAT is Confirm-gated; declining leaves clients without internet

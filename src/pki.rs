@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use rand::rngs::OsRng;
 use rcgen::string::Ia5String;
 use rcgen::{
-    BasicConstraints, CertificateParams, DistinguishedName, DnType, ExtendedKeyUsagePurpose,
-    IsCa, Issuer, KeyPair, KeyUsagePurpose, SanType, PKCS_RSA_SHA256,
+    BasicConstraints, CertificateParams, DistinguishedName, DnType, ExtendedKeyUsagePurpose, IsCa,
+    Issuer, KeyPair, KeyUsagePurpose, SanType, PKCS_RSA_SHA256,
 };
 use rsa::pkcs8::{EncodePrivateKey, LineEnding};
 use rsa::RsaPrivateKey;
@@ -12,9 +12,7 @@ use std::str::FromStr;
 use time::{Duration, OffsetDateTime};
 
 use crate::constants::{CA_KEY_BITS, COUNTRY_CODE_LEN, DAYS_PER_YEAR, LEAF_KEY_BITS};
-use crate::project::{
-    ca_cert_path, ca_key_path, write_public_file, write_secret_file,
-};
+use crate::project::{ca_cert_path, ca_key_path, write_public_file, write_secret_file};
 
 pub struct CaMaterial {
     pub cert_pem: String,
@@ -77,8 +75,8 @@ pub fn issue_server_cert(
 
     let issuer_key = KeyPair::from_pem_and_sign_algo(&ca.key_pem, &PKCS_RSA_SHA256)
         .context("failed to parse CA key")?;
-    let issuer = Issuer::from_ca_cert_pem(&ca.cert_pem, issuer_key)
-        .context("failed to load CA issuer")?;
+    let issuer =
+        Issuer::from_ca_cert_pem(&ca.cert_pem, issuer_key).context("failed to load CA issuer")?;
     let cert = params.signed_by(&key_pair, &issuer)?;
 
     Ok(LeafMaterial {
@@ -109,8 +107,8 @@ pub fn issue_client_cert(
 
     let issuer_key = KeyPair::from_pem_and_sign_algo(&ca.key_pem, &PKCS_RSA_SHA256)
         .context("failed to parse CA key")?;
-    let issuer = Issuer::from_ca_cert_pem(&ca.cert_pem, issuer_key)
-        .context("failed to load CA issuer")?;
+    let issuer =
+        Issuer::from_ca_cert_pem(&ca.cert_pem, issuer_key).context("failed to load CA issuer")?;
     let cert = params.signed_by(&key_pair, &issuer)?;
 
     Ok(LeafMaterial {
@@ -120,8 +118,10 @@ pub fn issue_client_cert(
 }
 
 pub fn load_ca() -> Result<CaMaterial> {
-    let cert_pem = std::fs::read_to_string(ca_cert_path()).context("failed to read CA certificate")?;
-    let key_pem = std::fs::read_to_string(ca_key_path()).context("failed to read CA private key")?;
+    let cert_pem =
+        std::fs::read_to_string(ca_cert_path()).context("failed to read CA certificate")?;
+    let key_pem =
+        std::fs::read_to_string(ca_key_path()).context("failed to read CA private key")?;
     Ok(CaMaterial { cert_pem, key_pem })
 }
 

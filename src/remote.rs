@@ -148,7 +148,9 @@ impl<'a> VpnManager<'a> {
                 .execute("apt-get update && apt-get install -y openvpn")
                 .await?;
         } else {
-            bail!("Unsupported OS ({os_info}) for automatic installation. Install OpenVPN manually.");
+            bail!(
+                "Unsupported OS ({os_info}) for automatic installation. Install OpenVPN manually."
+            );
         }
         logs("OpenVPN installed successfully.");
         Ok(())
@@ -210,7 +212,10 @@ impl<'a> VpnManager<'a> {
         if status != "active" {
             let journal = self
                 .session
-                .execute_or(&journal_tail_command(&service_name), "Could not retrieve logs")
+                .execute_or(
+                    &journal_tail_command(&service_name),
+                    "Could not retrieve logs",
+                )
                 .await;
             bail!("OpenVPN service failed to start (Status: {status}).\n--- Remote Logs ---\n{journal}");
         }

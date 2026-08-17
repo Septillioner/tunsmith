@@ -10,11 +10,12 @@ use crate::project::{
     ensure_dir, pki_dir, pki_exists, save_config, validate_instance_name, ServerConfig,
     TunsmithConfig,
 };
+use crate::style;
 use crate::templates::{find_template, template_names};
 
 pub fn run(args: InitArgs) -> Result<()> {
     if pki_exists() && !args.force {
-        println!("PKI already initialized. Use --force to re-initialize.");
+        style::warn("PKI already initialized. Use --force to re-initialize.");
         return Ok(());
     }
 
@@ -30,7 +31,10 @@ pub fn run(args: InitArgs) -> Result<()> {
 
     if let Some(name) = &args.template {
         let template = find_template(name).ok_or_else(|| {
-            anyhow::anyhow!("Unknown template: {name}\nAvailable templates: {}", template_names())
+            anyhow::anyhow!(
+                "Unknown template: {name}\nAvailable templates: {}",
+                template_names()
+            )
         })?;
         server = template.server;
         template_name = Some(template.name.to_string());
@@ -46,7 +50,10 @@ pub fn run(args: InitArgs) -> Result<()> {
     ensure_dir(&pki_dir())?;
 
     let validity = args.validity;
-    println!("Generating {validity}-year RSA-4096 root CA (this can take a few seconds)...");
+    style::step(
+        style::STAGE_PKI,
+        format!("Generating {validity}-year RSA-4096 root CA (this can take a few seconds)..."),
+    );
     let org = args.org.clone().unwrap_or_else(|| instance_name.clone());
     let ca = generate_root_ca(
         &Subject {
@@ -64,10 +71,10 @@ pub fn run(args: InitArgs) -> Result<()> {
     let template_note = template_name
         .map(|t| format!(" with {t} template"))
         .unwrap_or_default();
-    println!("initialized {instance_name}{template_note}");
-    println!("Config saved to: {CONFIG_FILE}");
-    println!("CA certificate saved to: pki/ca.crt");
-    println!("CA private key saved to: pki/ca.key (unencrypted)");
+    style::success(format!("initialized {instance_name}{template_note}"));
+    style::detail(format!("Config saved to: {CONFIG_FILE}"));
+    style::detail("CA certificate saved to: pki/ca.crt");
+    style::warn("CA private key saved to: pki/ca.key (unencrypted)");
     Ok(())
 }
 
@@ -101,16 +108,28 @@ fn merge_server(server: &mut ServerConfig, value: &serde_json::Value) -> Result<
     if let Some(v) = value.get("port").and_then(|v| v.as_u64()) {
         server.port = v as u16;
     }
-    if let Some(v) = value.get("protocol").or(value.get("proto")).and_then(|v| v.as_str()) {
+    if let Some(v) = value
+        .get("protocol")
+        .or(value.get("proto"))
+        .and_then(|v| v.as_str())
+    {
         server.protocol = v.to_string();
     }
     if let Some(v) = value.get("subnet").and_then(|v| v.as_str()) {
         server.subnet = v.to_string();
     }
-    if let Some(v) = value.get("device").or(value.get("dev")).and_then(|v| v.as_str()) {
+    if let Some(v) = value
+        .get("device")
+        .or(value.get("dev"))
+        .and_then(|v| v.as_str())
+    {
         server.device = v.to_string();
     }
-    if let Some(v) = value.get("redirect_gateway").or(value.get("redirectGateway")).and_then(|v| v.as_bool()) {
+    if let Some(v) = value
+        .get("redirect_gateway")
+        .or(value.get("redirectGateway"))
+        .and_then(|v| v.as_bool())
+    {
         server.redirect_gateway = v;
     }
     if let Some(v) = value.get("cipher").and_then(|v| v.as_str()) {
@@ -132,10 +151,18 @@ fn merge_server(server: &mut ServerConfig, value: &serde_json::Value) -> Result<
                 .collect(),
         );
     }
-    if let Some(v) = value.get("client_to_client").or(value.get("clientToClient")).and_then(|v| v.as_bool()) {
+    if let Some(v) = value
+        .get("client_to_client")
+        .or(value.get("clientToClient"))
+        .and_then(|v| v.as_bool())
+    {
         server.client_to_client = Some(v);
     }
-    if let Some(v) = value.get("block_outside_dns").or(value.get("blockOutsideDNS")).and_then(|v| v.as_bool()) {
+    if let Some(v) = value
+        .get("block_outside_dns")
+        .or(value.get("blockOutsideDNS"))
+        .and_then(|v| v.as_bool())
+    {
         server.block_outside_dns = Some(v);
     }
     Ok(())

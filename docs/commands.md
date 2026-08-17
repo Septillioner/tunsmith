@@ -48,7 +48,7 @@ tunsmith config set [OPTIONS]
 | `--verb <N>` | OpenVPN verbosity (`u8`) |
 | `--dns <LIST>` | IPv4 addresses separated by comma, space, or `;`. Non-IPv4 tokens are skipped with a warning. |
 | `--c2c` | `client_to_client = true` |
-| `--block-dns` | `block_outside_dns = true` (writes `block-outside-dns` in `server.conf`) |
+| `--block-dns` | `block_outside_dns = true` (writes `setenv opt block-outside-dns` in client `.ovpn`) |
 | `--allow-dns` | `block_outside_dns = false` |
 
 There is no flag to turn `redirect_gateway` or `client_to_client` off. Edit `tunsmith.json` or re-`init`.
@@ -73,11 +73,28 @@ Prints the names in `tunsmith.json`.
 
 ## `build`
 
-Requires an initialized PKI and a non-empty `--host`. Deletes `dist/` if present, then writes:
+Requires an initialized PKI and a non-empty VPN `--host` in `tunsmith.json` (`config set --host`). Deletes `dist/` if present, then writes:
 
+- `dist/build.json` — compile stamp (OpenVPN target, dialect `openvpn-2.4`, version source)
 - `dist/server/server.conf`
 - copies of `ca.crt`, `server.crt`, `server.key`, `tls-crypt.key` into `dist/server/`
 - `dist/clients/<name>.ovpn` for each listed client
+
+```text
+tunsmith build
+tunsmith build --host 203.0.113.10
+tunsmith build --openvpn-version 2.6
+tunsmith build --host 203.0.113.10 --openvpn-version 2.4.12
+```
+
+| Flag | Meaning |
+| --- | --- |
+| `--host <HOST>` | Use `remotes/<HOST>.json` from `preview ssh`. Required when several remotes exist. |
+| `--openvpn-version <X.Y\|X.Y.Z>` | Compile for this OpenVPN version. Overrides the preview. Do not use `-V` (that is the Tunsmith binary). Below 2.4 fails. |
+
+Default version is the preview server (`remotes/*.json`). One remote is selected automatically. No remotes: baseline OpenVPN 2.4 on Linux. This slice still emits 2.4 syntax (`cipher`, not `data-ciphers`) for every allowed target.
+
+`remote setup` / `remote update` upload `dist/` unchanged. After OpenVPN is installed they parse the live version and refuse if it cannot run the stamp dialect (below 2.4, or missing OpenVPN). Missing `dist/build.json` is treated as `openvpn-2.4` with a warning.
 
 Issues `pki/server/` material and each missing client cert on first need. Reuses existing PEM files. Paths inside `server.conf` are relative to `/etc/openvpn/server/` (`<instance>/ca.crt`, and so on).
 

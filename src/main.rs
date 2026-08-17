@@ -2,10 +2,12 @@ mod cli;
 mod commands;
 mod constants;
 mod ovpn;
+mod ovpn_target;
 mod pki;
 mod project;
 mod remote;
 mod ssh;
+mod style;
 mod templates;
 
 use anyhow::Result;

@@ -2,8 +2,10 @@ use anyhow::Result;
 
 use crate::cli::{PreviewCommands, SshArgs};
 use crate::commands::connect::{open_session, prepare_ssh};
+use crate::constants::OPENVPN_NOT_INSTALLED;
 use crate::project::{now_rfc3339, save_remote_profile, RemoteProfile};
 use crate::remote::VpnManager;
+use crate::style;
 
 pub async fn run(cmd: PreviewCommands) -> Result<()> {
     match cmd {
@@ -18,30 +20,34 @@ pub async fn preview_ssh(args: SshArgs) -> Result<Option<(RemoteProfile, RemoteS
     let prepared = prepare_ssh(&args, true)?;
     let session = open_session(&prepared).await?;
     let manager = VpnManager::new(&session);
-    println!("Analyzing remote environment...");
+    style::step(style::STAGE_PROBE, "Analyzing remote environment...");
     let info = manager.analyze_environment(&prepared.target.host).await?;
 
-    println!("Connected to {}", info.hostname);
-    println!("\n--- System Overview ---");
-    println!("OS:             {}", info.os);
-    println!("Kernel:         {}", info.kernel);
-    println!("Uptime:         {}", info.uptime);
-    println!("CPU:            {}", info.cpu);
-    println!("RAM:            {}", info.ram);
-    println!("Disk (/):       {}", info.disk);
-    println!("\n--- Networking ---");
-    println!("Public IP:      {}", info.public_ip);
-    println!("Local IP:       {}", info.local_ip);
-    println!(
-        "IP Forwarding:  {}",
+    style::success(format!("Connected to {}", info.hostname));
+    style::heading("System");
+    style::field("OS", &info.os);
+    style::field("Kernel", &info.kernel);
+    style::field("Uptime", &info.uptime);
+    style::field("CPU", &info.cpu);
+    style::field("RAM", &info.ram);
+    style::field("Disk (/)", &info.disk);
+    style::heading("Networking");
+    style::field("Public IP", &info.public_ip);
+    style::field("Local IP", &info.local_ip);
+    style::field(
+        "IP Forwarding",
         if info.is_forwarding_enabled {
             "Enabled"
         } else {
             "Disabled"
-        }
+        },
     );
-    println!("\n--- VPN Status ---");
-    println!("OpenVPN:        {}", info.vpn_version);
+    style::heading("VPN");
+    if info.vpn_version == OPENVPN_NOT_INSTALLED {
+        style::field("OpenVPN", style::warn_value(&info.vpn_version));
+    } else {
+        style::field("OpenVPN", &info.vpn_version);
+    }
 
     let profile = RemoteProfile {
         host: prepared.target.host.clone(),
@@ -60,7 +66,7 @@ pub async fn preview_ssh(args: SshArgs) -> Result<Option<(RemoteProfile, RemoteS
         setup: prepared.existing_profile.and_then(|p| p.setup),
     };
     save_remote_profile(&profile)?;
-    println!("\nProfile updated: remotes/{}.json", profile.host);
+    style::success(format!("Profile updated: remotes/{}.json", profile.host));
 
     Ok(Some((profile, RemoteSessionHandle { session })))
 }
@@ -69,7 +75,9 @@ pub struct RemoteSessionHandle {
     pub session: crate::ssh::RemoteSession,
 }
 
-pub async fn connect_and_inspect(args: SshArgs) -> Result<(RemoteProfile, crate::ssh::RemoteSession)> {
+pub async fn connect_and_inspect(
+    args: SshArgs,
+) -> Result<(RemoteProfile, crate::ssh::RemoteSession)> {
     let result = preview_ssh(args).await?;
     let (profile, handle) = result.ok_or_else(|| anyhow::anyhow!("SSH discovery failed"))?;
     Ok((profile, handle.session))

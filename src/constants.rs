@@ -12,6 +12,13 @@ pub const REMOTES_DIR: &str = "remotes";
 pub const DIST_DIR: &str = "dist";
 pub const DIST_SERVER_DIR: &str = "server";
 pub const DIST_CLIENTS_DIR: &str = "clients";
+pub const BUILD_STAMP_FILE: &str = "build.json";
+pub const DIALECT_OPENVPN_2_4: &str = "openvpn-2.4";
+pub const MIN_OPENVPN_MAJOR: u16 = 2;
+pub const MIN_OPENVPN_MINOR: u16 = 4;
+pub const OPENVPN_NOT_INSTALLED: &str = "Not installed";
+pub const BLOCK_OUTSIDE_DNS: &str = "block-outside-dns";
+pub const SETENV_OPT: &str = "setenv opt";
 
 pub const PROJECT_VERSION: &str = "0.1.0";
 

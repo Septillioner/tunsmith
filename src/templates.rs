@@ -26,7 +26,8 @@ pub fn all_templates() -> Vec<Template> {
         },
         Template {
             name: TEMPLATE_CLOUD_VPN,
-            description: "Split tunnel VPN. Best for accessing private networks with client communication.",
+            description:
+                "Split tunnel VPN. Best for accessing private networks with client communication.",
             server: ServerConfig {
                 redirect_gateway: false,
                 client_to_client: Some(true),

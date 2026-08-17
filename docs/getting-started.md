@@ -34,6 +34,7 @@ All commands operate on the current working directory. Create an empty folder an
 tunsmith init --template gateway-vpn
 tunsmith config set --host vpn.example.com
 tunsmith client add laptop
+tunsmith preview ssh root@203.0.113.10
 tunsmith build
 ```
 
@@ -43,7 +44,9 @@ tunsmith build
 
 `client add` only appends a name to `tunsmith.json`. Certificates are issued on `build`.
 
-`build` writes `dist/server/` (OpenVPN server files) and `dist/clients/*.ovpn` (unified client profiles). Import the `.ovpn` in an OpenVPN 2.4+ client.
+`preview ssh` writes `remotes/<host>.json` including the remote OpenVPN version. `build` uses that as the default compile target. Override with `build --openvpn-version X.Y` (or `X.Y.Z`). No preview: baseline OpenVPN 2.4. This slice still writes 2.4 syntax (`cipher`, `tls-crypt`, `dh none`).
+
+`build` writes `dist/build.json`, `dist/server/` (OpenVPN server files) and `dist/clients/*.ovpn` (unified client profiles). Import the `.ovpn` in an OpenVPN 2.4+ client.
 
 To install on a remote host:
 
@@ -51,7 +54,7 @@ To install on a remote host:
 tunsmith remote setup ssh root@203.0.113.10
 ```
 
-That command needs `dist/` already built. Details: [remote.md](remote.md). Full flag list: [commands.md](commands.md).
+That command needs `dist/` already built. After apt it checks the live OpenVPN version against `dist/build.json` and refuses below 2.4. Details: [remote.md](remote.md). Full flag list: [commands.md](commands.md).
 
 ## Files that appear
 
@@ -61,6 +64,7 @@ That command needs `dist/` already built. Details: [remote.md](remote.md). Full 
 | `pki/ca.crt`, `pki/ca.key` | `init` | Root CA (key unencrypted) |
 | `pki/server/` | first `build` | Server cert, key, TLS-Crypt |
 | `pki/clients/<name>/` | first `build` for that client | Client cert and key |
+| `dist/build.json` | `build` | Compile stamp: OpenVPN target and dialect |
 | `dist/server/` | `build` | `server.conf` plus copies of CA, server cert/key, TLS-Crypt |
 | `dist/clients/<name>.ovpn` | `build` | Unified profile, includes the client key |
 | `remotes/<host>.json` | `preview ssh` or `remote * ssh` | SSH host profile (no passwords) |
@@ -75,7 +79,7 @@ Those paths are gitignored. Do not commit `pki/` or `dist/clients/*.ovpn`.
 
 | Template | Tunnel | Subnet | Notes |
 | --- | --- | --- | --- |
-| `gateway-vpn` | Full (`redirect_gateway`) | `10.8.0.0/24` | Pushes 8.8.8.8 / 8.8.4.4, `block-outside-dns` |
+| `gateway-vpn` | Full (`redirect_gateway`) | `10.8.0.0/24` | Pushes 8.8.8.8 / 8.8.4.4; client `.ovpn` gets `setenv opt block-outside-dns` |
 | `cloud-vpn` | Split | `10.10.0.0/24` | Client-to-client |
 | `gateway-cloud-vpn` | Full | `10.12.0.0/24` | Full tunnel plus client-to-client |
 

@@ -6,6 +6,7 @@ use crate::cli::{ClientCommands, ConfigCommands, ConfigSetArgs, InitArgs};
 use crate::commands::{build, client, config, init};
 use crate::constants::{APP_DISPLAY_NAME, DEFAULT_CA_VALIDITY_YEARS, DEFAULT_INSTANCE_NAME};
 use crate::project::pki_exists;
+use crate::style;
 use crate::templates::all_templates;
 
 const MENU_SEPARATOR_WIDTH: usize = 40;
@@ -21,11 +22,12 @@ const ACTION_EXIT: usize = 5;
 const MENU_LEN: usize = 6;
 
 pub fn run() -> Result<()> {
-    println!("\n--- {APP_DISPLAY_NAME} TUI ---");
+    style::heading(&format!("{APP_DISPLAY_NAME} TUI"));
+    let theme = style::theme();
     loop {
         let initialized = pki_exists();
         let items = menu_labels(initialized);
-        let index = Select::new()
+        let index = Select::with_theme(&theme)
             .with_prompt("What would you like to do?")
             .items(&items)
             .default(ACTION_STATUS)
@@ -36,15 +38,15 @@ pub fn run() -> Result<()> {
             ACTION_INIT => handle_init(initialized)?,
             ACTION_CONFIG if initialized => handle_config()?,
             ACTION_CLIENTS if initialized => handle_clients()?,
-            ACTION_BUILD if initialized => build::run()?,
+            ACTION_BUILD if initialized => build::run(Default::default())?,
             ACTION_EXIT => break,
             ACTION_CONFIG | ACTION_CLIENTS | ACTION_BUILD => {
-                println!("Initialize the project first.");
+                style::warn("Initialize the project first.");
             }
             _ => {}
         }
 
-        println!("{}", "-".repeat(MENU_SEPARATOR_WIDTH));
+        style::rule(MENU_SEPARATOR_WIDTH);
     }
     Ok(())
 }
@@ -78,7 +80,7 @@ fn handle_init(initialized: bool) -> Result<()> {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| DEFAULT_INSTANCE_NAME.to_string());
 
-    let name: String = Input::new()
+    let name: String = Input::with_theme(&style::theme())
         .with_prompt("Project name")
         .default(default_name)
         .interact_text()?;
@@ -90,7 +92,7 @@ fn handle_init(initialized: bool) -> Result<()> {
             .iter()
             .map(|t| format!("{} ({})", t.name, t.description)),
     );
-    let template_index = Select::new()
+    let template_index = Select::with_theme(&style::theme())
         .with_prompt("Select a template")
         .items(&template_labels)
         .default(0)
@@ -101,7 +103,7 @@ fn handle_init(initialized: bool) -> Result<()> {
         Some(templates[template_index - 1].name.to_string())
     };
 
-    let confirm = Confirm::new()
+    let confirm = Confirm::with_theme(&style::theme())
         .with_prompt("This will initialize the PKI. Continue?")
         .default(true)
         .interact()?;
@@ -110,7 +112,7 @@ fn handle_init(initialized: bool) -> Result<()> {
     }
 
     let force = if initialized {
-        Confirm::new()
+        Confirm::with_theme(&style::theme())
             .with_prompt("Overwrite existing CA?")
             .default(false)
             .interact()?
@@ -118,7 +120,7 @@ fn handle_init(initialized: bool) -> Result<()> {
         false
     };
     if initialized && !force {
-        println!("Initialization cancelled.");
+        style::info("Initialization cancelled.");
         return Ok(());
     }
 
@@ -134,8 +136,14 @@ fn handle_init(initialized: bool) -> Result<()> {
 }
 
 fn handle_config() -> Result<()> {
-    let keys = ["Server host", "Port", "Subnet", "DNS servers", "Back to menu"];
-    let index = Select::new()
+    let keys = [
+        "Server host",
+        "Port",
+        "Subnet",
+        "DNS servers",
+        "Back to menu",
+    ];
+    let index = Select::with_theme(&style::theme())
         .with_prompt("What would you like to configure?")
         .items(&keys)
         .default(0)
@@ -144,8 +152,11 @@ fn handle_config() -> Result<()> {
         return Ok(());
     }
 
-    let value: String = Input::new()
-        .with_prompt(format!("Enter new value for {}", keys[index].to_lowercase()))
+    let value: String = Input::with_theme(&style::theme())
+        .with_prompt(format!(
+            "Enter new value for {}",
+            keys[index].to_lowercase()
+        ))
         .interact_text()?;
     if value.trim().is_empty() {
         return Ok(());
@@ -155,9 +166,11 @@ fn handle_config() -> Result<()> {
     match index {
         0 => args.host = Some(value),
         1 => {
-            args.port = Some(value.parse().map_err(|_| {
-                anyhow::anyhow!("port must be an integer between 1 and 65535")
-            })?);
+            args.port = Some(
+                value
+                    .parse()
+                    .map_err(|_| anyhow::anyhow!("port must be an integer between 1 and 65535"))?,
+            );
         }
         2 => args.subnet = Some(value),
         3 => args.dns = Some(value),
@@ -168,7 +181,7 @@ fn handle_config() -> Result<()> {
 
 fn handle_clients() -> Result<()> {
     let items = ["List clients", "Add client", "Back to menu"];
-    let index = Select::new()
+    let index = Select::with_theme(&style::theme())
         .with_prompt("Client management")
         .items(&items)
         .default(0)
@@ -176,7 +189,7 @@ fn handle_clients() -> Result<()> {
     match index {
         0 => config::run(ConfigCommands::Show),
         1 => {
-            let name: String = Input::new()
+            let name: String = Input::with_theme(&style::theme())
                 .with_prompt("Client name")
                 .interact_text()?;
             if name.trim().is_empty() {

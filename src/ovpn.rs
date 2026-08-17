@@ -2,12 +2,13 @@ use anyhow::{bail, Result};
 use rand::RngCore;
 
 use crate::constants::{
-    DEFAULT_AUTH, DEFAULT_CIPHER, DEFAULT_KEEPALIVE_INTERVAL, DEFAULT_KEEPALIVE_TIMEOUT,
-    DEFAULT_VPN_PORT, EXPLICIT_EXIT_NOTIFY, GENERATED_BY_COMMENT, IPV4_MAX_PREFIX, LINUX_GROUP,
-    LINUX_USER, MIN_TLS_VERSION_LINE, MUTE_LOG_REPEAT, OPEN_VPN_STATUS_FILE,
-    OPEN_VPN_STATUS_LOG_PATH, STATUS_LOG_INTERVAL, TLS_CRYPT_HEX_LINE_CHARS, TLS_CRYPT_KEY_BYTES,
-    TOPOLOGY,
+    BLOCK_OUTSIDE_DNS, DEFAULT_AUTH, DEFAULT_CIPHER, DEFAULT_KEEPALIVE_INTERVAL,
+    DEFAULT_KEEPALIVE_TIMEOUT, DEFAULT_VPN_PORT, EXPLICIT_EXIT_NOTIFY, GENERATED_BY_COMMENT,
+    IPV4_MAX_PREFIX, LINUX_GROUP, LINUX_USER, MIN_TLS_VERSION_LINE, MUTE_LOG_REPEAT,
+    OPEN_VPN_STATUS_FILE, OPEN_VPN_STATUS_LOG_PATH, SETENV_OPT, STATUS_LOG_INTERVAL,
+    TLS_CRYPT_HEX_LINE_CHARS, TLS_CRYPT_KEY_BYTES, TOPOLOGY,
 };
+use crate::ovpn_target::{LinePolicy, PeerTarget};
 
 pub struct VpnEndpoints {
     pub host: String,
@@ -50,7 +51,9 @@ pub fn build_server_config(
     pki_paths: &VpnPkiPaths,
     keepalive: &str,
     verb: u8,
+    server_target: &PeerTarget,
 ) -> Result<String> {
+    server_target.capabilities().require_minimum()?;
     let (net_addr, netmask) = parse_subnet(&network.subnet)?;
     let (ka_interval, ka_timeout) = parse_keepalive(keepalive);
     let cipher = if crypto.cipher.is_empty() {
@@ -112,11 +115,6 @@ pub fn build_server_config(
         lines.push(String::new());
     }
 
-    if network.block_outside_dns {
-        lines.push("block-outside-dns".to_string());
-        lines.push(String::new());
-    }
-
     lines.push("# Performance & Security".to_string());
     lines.push(format!("keepalive {ka_interval} {ka_timeout}"));
     lines.push(format!("cipher {cipher}"));
@@ -154,6 +152,8 @@ pub fn build_client_config(
     crypto: &VpnCrypto,
     bundle: &ClientBundle,
     verb: u8,
+    block_outside_dns: bool,
+    client_target: &PeerTarget,
 ) -> String {
     let cipher = if crypto.cipher.is_empty() {
         DEFAULT_CIPHER
@@ -189,6 +189,12 @@ pub fn build_client_config(
     lines.push("persist-key".to_string());
     lines.push("persist-tun".to_string());
     lines.push(String::new());
+
+    let client_caps = client_target.capabilities();
+    if client_caps.block_outside_dns_policy(block_outside_dns) == LinePolicy::OptionalWrap {
+        lines.push(optional_directive(BLOCK_OUTSIDE_DNS));
+        lines.push(String::new());
+    }
 
     lines.push(format!("verb {verb}"));
     lines.push(format!("mute {MUTE_LOG_REPEAT}"));
@@ -270,6 +276,10 @@ fn trim_pem(pem: &str) -> String {
     pem.trim().to_string()
 }
 
+fn optional_directive(name: &str) -> String {
+    format!("{SETENV_OPT} {name}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -329,6 +339,7 @@ mod tests {
             &sample_pki_paths(),
             DEFAULT_KEEPALIVE,
             DEFAULT_VERB,
+            &PeerTarget::linux_server(Some(crate::ovpn_target::OpenVpnVersion::baseline())),
         )
         .unwrap();
 
@@ -358,6 +369,7 @@ mod tests {
             &sample_pki_paths(),
             DEFAULT_KEEPALIVE,
             DEFAULT_VERB,
+            &PeerTarget::linux_server(Some(crate::ovpn_target::OpenVpnVersion::baseline())),
         )
         .unwrap();
 
@@ -387,6 +399,8 @@ mod tests {
             &sample_crypto(),
             &bundle,
             DEFAULT_VERB,
+            false,
+            &PeerTarget::mixed_client(),
         );
 
         assert!(config.contains("<ca>"));
@@ -414,7 +428,10 @@ mod tests {
         let hex_lines = &lines[1..lines.len() - 1];
         let expected_hex_chars = TLS_CRYPT_KEY_BYTES * 2;
         assert_eq!(expected_hex_chars % TLS_CRYPT_HEX_LINE_CHARS, 0);
-        assert_eq!(hex_lines.len(), expected_hex_chars / TLS_CRYPT_HEX_LINE_CHARS);
+        assert_eq!(
+            hex_lines.len(),
+            expected_hex_chars / TLS_CRYPT_HEX_LINE_CHARS
+        );
         for line in hex_lines {
             assert_eq!(line.len(), TLS_CRYPT_HEX_LINE_CHARS);
             assert!(line.chars().all(|c| matches!(c, '0'..='9' | 'a'..='f')));

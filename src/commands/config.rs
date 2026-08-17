@@ -3,6 +3,7 @@ use anyhow::Result;
 use crate::cli::{ConfigCommands, ConfigSetArgs};
 use crate::constants::{APP_DISPLAY_NAME, MAX_PORT, MIN_PORT};
 use crate::project::{require_config, save_config};
+use crate::style;
 
 pub fn run(cmd: ConfigCommands) -> Result<()> {
     match cmd {
@@ -53,7 +54,9 @@ fn set(args: ConfigSetArgs) -> Result<()> {
                 if looks_like_ipv4(ip) {
                     Some(ip.to_string())
                 } else {
-                    println!("Warning: \"{ip}\" does not look like a valid IPv4 address. Skipping.");
+                    style::warn(format!(
+                        "\"{ip}\" does not look like a valid IPv4 address. Skipping."
+                    ));
                     None
                 }
             })
@@ -76,64 +79,57 @@ fn set(args: ConfigSetArgs) -> Result<()> {
     }
 
     save_config(&cfg)?;
-    println!("Configuration updated successfully.");
+    style::success("Configuration updated successfully.");
     println!("{}", serde_json::to_string_pretty(&cfg.server)?);
     Ok(())
 }
 
 fn show() -> Result<()> {
     let cfg = require_config()?;
-    println!("\n--- {APP_DISPLAY_NAME} Project Configuration ---");
-    println!("Instance Name:  {}", cfg.instance_name);
-    println!("Version:        {}", cfg.version);
-    println!(
-        "Template:       {}",
-        cfg.template.as_deref().unwrap_or("None")
-    );
-    println!("Created At:     {}", cfg.created_at);
+    style::heading(&format!("{APP_DISPLAY_NAME} project"));
+    style::field("Instance", &cfg.instance_name);
+    style::field("Version", &cfg.version);
+    style::field("Template", cfg.template.as_deref().unwrap_or("None"));
+    style::field("Created", &cfg.created_at);
 
-    println!("\n--- Server Settings ---");
-    let host = if cfg.server.host.is_empty() {
-        "Not set".to_string()
+    style::heading("Server");
+    if cfg.server.host.is_empty() {
+        style::field("Host", style::warn_value("Not set"));
     } else {
-        cfg.server.host.clone()
-    };
-    println!("Host:           {host}");
-    println!("Port:           {}", cfg.server.port);
-    println!("Protocol:       {}", cfg.server.protocol);
-    println!("Subnet:         {}", cfg.server.subnet);
-    println!("Device:         {}", cfg.server.device);
-    println!(
-        "Redirect GW:    {}",
-        enabled(cfg.server.redirect_gateway)
+        style::field("Host", &cfg.server.host);
+    }
+    style::field("Port", cfg.server.port);
+    style::field("Protocol", &cfg.server.protocol);
+    style::field("Subnet", &cfg.server.subnet);
+    style::field("Device", &cfg.server.device);
+    style::field("Redirect GW", enabled(cfg.server.redirect_gateway));
+    style::field(
+        "Client-to-Client",
+        enabled(cfg.server.client_to_client.unwrap_or(false)),
     );
-    println!(
-        "Client-to-Client: {}",
-        enabled(cfg.server.client_to_client.unwrap_or(false))
+    style::field(
+        "Block Out. DNS",
+        enabled(cfg.server.block_outside_dns.unwrap_or(false)),
     );
-    println!(
-        "Block Out. DNS: {}",
-        enabled(cfg.server.block_outside_dns.unwrap_or(false))
-    );
-    println!(
-        "DNS Servers:    {}",
+    style::field(
+        "DNS Servers",
         cfg.server
             .dns
             .as_ref()
             .map(|d| d.join(", "))
-            .unwrap_or_else(|| "Default".to_string())
+            .unwrap_or_else(|| "Default".to_string()),
     );
-    println!("Cipher:         {}", cfg.server.cipher);
-    println!("Auth:           {}", cfg.server.auth);
-    println!("Keepalive:      {}", cfg.server.keepalive);
-    println!("Verbosity:      {}", cfg.server.verb);
+    style::field("Cipher", &cfg.server.cipher);
+    style::field("Auth", &cfg.server.auth);
+    style::field("Keepalive", &cfg.server.keepalive);
+    style::field("Verbosity", cfg.server.verb);
 
-    println!("\n--- Clients ---");
+    style::heading("Clients");
     if cfg.clients.is_empty() {
-        println!("No clients added yet.");
+        style::info("No clients added yet.");
     } else {
         for client in &cfg.clients {
-            println!(" - {}", client.name);
+            style::detail(&client.name);
         }
     }
     println!();
@@ -153,9 +149,7 @@ fn looks_like_ipv4(ip: &str) -> bool {
     if parts.len() != 4 {
         return false;
     }
-    parts.iter().all(|p| {
-        p.parse::<u8>().is_ok()
-    })
+    parts.iter().all(|p| p.parse::<u8>().is_ok())
 }
 
 #[cfg(test)]

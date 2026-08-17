@@ -14,6 +14,7 @@ use crate::constants::{
     KNOWN_HOSTS_FILE, REMOTE_FILE_MODE,
 };
 use crate::project::AUTH_TYPE_PASSWORD;
+use crate::style;
 
 pub struct SshTarget {
     pub host: String,
@@ -88,7 +89,11 @@ impl RemoteSession {
         };
 
         if !ok {
-            bail!("SSH authentication failed for {}@{}", target.user, target.host);
+            bail!(
+                "SSH authentication failed for {}@{}",
+                target.user,
+                target.host
+            );
         }
 
         Ok(Self { handle })
@@ -114,8 +119,8 @@ impl RemoteSession {
     }
 
     pub async fn upload_file(&self, local: &Path, remote: &str) -> Result<()> {
-        let bytes = std::fs::read(local)
-            .with_context(|| format!("failed to read {}", local.display()))?;
+        let bytes =
+            std::fs::read(local).with_context(|| format!("failed to read {}", local.display()))?;
         let parent = remote_parent(remote);
         self.mkdir_p(&parent).await?;
 
@@ -211,7 +216,7 @@ fn load_key(path: &Path) -> Result<russh::keys::PrivateKey> {
     match load_secret_key(path, None) {
         Ok(key) => Ok(key),
         Err(_) => {
-            let pass = dialoguer::Password::new()
+            let pass = dialoguer::Password::with_theme(&style::theme())
                 .with_prompt(format!("Passphrase for {}", path.display()))
                 .allow_empty_password(true)
                 .interact()?;
@@ -236,7 +241,7 @@ fn verify_known_host(host: &str, port: u16, key: &PublicKey) -> Result<bool> {
             let prompt = format!(
                 "The authenticity of host '{host}' can't be established.\n{fp}\nTrust this host and add it to known_hosts?"
             );
-            let yes = Confirm::new()
+            let yes = Confirm::with_theme(&style::theme())
                 .with_prompt(prompt)
                 .default(false)
                 .interact()?;
@@ -268,12 +273,7 @@ fn host_pattern(host: &str, port: u16) -> String {
     }
 }
 
-fn lookup_known_host(
-    path: &Path,
-    host: &str,
-    port: u16,
-    key: &PublicKey,
-) -> Result<HostKeyStatus> {
+fn lookup_known_host(path: &Path, host: &str, port: u16, key: &PublicKey) -> Result<HostKeyStatus> {
     if !path.is_file() {
         return Ok(HostKeyStatus::Unknown);
     }
@@ -287,9 +287,7 @@ fn lookup_known_host(
         if line.is_empty() || line.starts_with('#') {
             continue;
         }
-        let line = line
-            .strip_prefix("@cert-authority ")
-            .unwrap_or(line);
+        let line = line.strip_prefix("@cert-authority ").unwrap_or(line);
         if line.starts_with('@') {
             continue;
         }
@@ -345,7 +343,7 @@ pub fn journal_tail_command(service: &str) -> String {
 }
 
 pub fn prompt_password() -> Result<String> {
-    Ok(dialoguer::Password::new()
+    Ok(dialoguer::Password::with_theme(&style::theme())
         .with_prompt("SSH password")
         .interact()?)
 }

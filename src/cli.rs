@@ -1,16 +1,15 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
-use crate::commands::{
-    build, client, config, init, preview, remote, template, tui,
-};
+use crate::commands::{build, client, config, init, preview, remote, template, tui};
 use crate::constants::{APP_NAME, DEFAULT_SSH_PORT, DEFAULT_SSH_USER};
 
 const AFTER_HELP: &str = "\
-Quick start:
+    Quick start:
   $ tunsmith init --template gateway-vpn
   $ tunsmith config set --host vpn.example.com
   $ tunsmith client add laptop
+  $ tunsmith preview ssh root@203.0.113.10
   $ tunsmith build
   $ tunsmith tui
   $ tunsmith remote setup ssh root@203.0.113.10
@@ -41,7 +40,7 @@ pub enum Commands {
     #[command(subcommand)]
     Client(ClientCommands),
     /// Generate configuration files into dist/
-    Build,
+    Build(BuildArgs),
     /// List configuration templates
     Template,
     /// Interactive terminal menu (not a web UI)
@@ -52,6 +51,16 @@ pub enum Commands {
     /// Manage remote VPN servers
     #[command(subcommand)]
     Remote(RemoteCommands),
+}
+
+#[derive(Parser, Default)]
+pub struct BuildArgs {
+    /// Remote profile host (remotes/<host>.json). Default: the only preview host.
+    #[arg(long)]
+    pub host: Option<String>,
+    /// OpenVPN version to compile for (X.Y or X.Y.Z). Default: preview server, else 2.4.
+    #[arg(long)]
+    pub openvpn_version: Option<String>,
 }
 
 #[derive(Parser)]
@@ -190,7 +199,7 @@ impl Cli {
             Some(Commands::Init(args)) => init::run(args),
             Some(Commands::Config(cmd)) => config::run(cmd),
             Some(Commands::Client(cmd)) => client::run(cmd),
-            Some(Commands::Build) => build::run(),
+            Some(Commands::Build(args)) => build::run(args),
             Some(Commands::Template) => template::run(),
             Some(Commands::Tui) => tui::run(),
             Some(Commands::Preview(cmd)) => preview::run(cmd).await,
@@ -209,7 +218,7 @@ mod tests {
     #[test]
     fn parses_build_command() {
         let cli = Cli::try_parse_from(["tunsmith", "build"]).unwrap();
-        assert!(matches!(cli.command, Some(Commands::Build)));
+        assert!(matches!(cli.command, Some(Commands::Build(_))));
     }
 
     #[test]
@@ -220,8 +229,8 @@ mod tests {
 
     #[test]
     fn parses_init_with_template() {
-        let cli = Cli::try_parse_from(["tunsmith", "init", "--template", TEMPLATE_GATEWAY_VPN])
-            .unwrap();
+        let cli =
+            Cli::try_parse_from(["tunsmith", "init", "--template", TEMPLATE_GATEWAY_VPN]).unwrap();
         match cli.command {
             Some(Commands::Init(args)) => {
                 assert_eq!(args.template.as_deref(), Some(TEMPLATE_GATEWAY_VPN));
@@ -248,7 +257,9 @@ mod tests {
         let cli = Cli::try_parse_from(["tunsmith", "remote", "clean", "local"]).unwrap();
         assert!(matches!(
             cli.command,
-            Some(Commands::Remote(RemoteCommands::Clean(CleanCommands::Local)))
+            Some(Commands::Remote(RemoteCommands::Clean(
+                CleanCommands::Local
+            )))
         ));
     }
 

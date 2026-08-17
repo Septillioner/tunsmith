@@ -4,11 +4,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::constants::{
-    APP_NAME, CA_CERT_FILE, CA_KEY_FILE, CLIENT_CERT_FILE, CLIENT_KEY_FILE, CLIENTS_DIR, CONFIG_FILE,
-    DEFAULT_AUTH, DEFAULT_CIPHER, DEFAULT_DEVICE, DEFAULT_KEEPALIVE, DEFAULT_PROTOCOL,
-    DEFAULT_SUBNET, DEFAULT_VERB, DEFAULT_VPN_PORT, DIST_CLIENTS_DIR, DIST_DIR, DIST_SERVER_DIR,
-    PKI_DIR, PROJECT_VERSION, REMOTES_DIR, SERVER_CERT_FILE, SERVER_DIR, SERVER_KEY_FILE,
-    TLS_CRYPT_FILE,
+    APP_NAME, BUILD_STAMP_FILE, CA_CERT_FILE, CA_KEY_FILE, CLIENTS_DIR, CLIENT_CERT_FILE,
+    CLIENT_KEY_FILE, CONFIG_FILE, DEFAULT_AUTH, DEFAULT_CIPHER, DEFAULT_DEVICE, DEFAULT_KEEPALIVE,
+    DEFAULT_PROTOCOL, DEFAULT_SUBNET, DEFAULT_VERB, DEFAULT_VPN_PORT, DIST_CLIENTS_DIR, DIST_DIR,
+    DIST_SERVER_DIR, PKI_DIR, PROJECT_VERSION, REMOTES_DIR, SERVER_CERT_FILE, SERVER_DIR,
+    SERVER_KEY_FILE, TLS_CRYPT_FILE,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -179,6 +179,10 @@ pub fn dist_clients_dir() -> PathBuf {
     dist_dir().join(DIST_CLIENTS_DIR)
 }
 
+pub fn dist_build_stamp_path() -> PathBuf {
+    dist_dir().join(BUILD_STAMP_FILE)
+}
+
 pub fn pki_exists() -> bool {
     ca_cert_path().is_file() && ca_key_path().is_file()
 }
@@ -188,17 +192,16 @@ pub fn load_config() -> Result<Option<TunsmithConfig>> {
     if !path.is_file() {
         return Ok(None);
     }
-    let raw = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let raw =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     let cfg = serde_json::from_str(&raw)
         .with_context(|| format!("failed to parse {}", path.display()))?;
     Ok(Some(cfg))
 }
 
 pub fn require_config() -> Result<TunsmithConfig> {
-    load_config()?.ok_or_else(|| {
-        anyhow::anyhow!("Project not initialized. Run \"{APP_NAME} init\" first.")
-    })
+    load_config()?
+        .ok_or_else(|| anyhow::anyhow!("Project not initialized. Run \"{APP_NAME} init\" first."))
 }
 
 pub fn save_config(config: &TunsmithConfig) -> Result<()> {
@@ -212,8 +215,8 @@ pub fn load_remote_profile(host: &str) -> Result<Option<RemoteProfile>> {
     if !path.is_file() {
         return Ok(None);
     }
-    let raw = fs::read_to_string(&path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let raw =
+        fs::read_to_string(&path).with_context(|| format!("failed to read {}", path.display()))?;
     Ok(Some(serde_json::from_str(&raw)?))
 }
 
@@ -345,8 +348,14 @@ mod tests {
         assert_eq!(restored.server.cipher, config.server.cipher);
         assert_eq!(restored.server.auth, config.server.auth);
         assert_eq!(restored.server.dns, config.server.dns);
-        assert_eq!(restored.server.client_to_client, config.server.client_to_client);
-        assert_eq!(restored.server.block_outside_dns, config.server.block_outside_dns);
+        assert_eq!(
+            restored.server.client_to_client,
+            config.server.client_to_client
+        );
+        assert_eq!(
+            restored.server.block_outside_dns,
+            config.server.block_outside_dns
+        );
         assert_eq!(restored.clients.len(), 1);
         assert_eq!(restored.clients[0].name, "laptop");
     }

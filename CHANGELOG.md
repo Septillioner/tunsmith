@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Public name is Tunsmith (`tunsmith` binary, crate, and `tunsmith.json`)
+- `block-outside-dns` is no longer written into `server.conf`. When enabled, client profiles get `setenv opt block-outside-dns`.
+- CLI output is TTY-aware (respects `NO_COLOR`): status roles, accent labels for build Target/Dialect, and stage prefixes on preview/build/remote.
 
 ### Added
 
 - `tunsmith tui`: interactive terminal menu for status, init, config, clients, and build (not a web UI; no remote)
+- OpenVPN compatibility table in README (expected 2.4+, recommended 2.6, untested until marked)
+- `build --host` and `build --openvpn-version`: default compile target from `preview` remotes; stamp `dist/build.json`; `remote setup`/`update` refuse OpenVPN below 2.4
 
 ## [0.1.0] - 2026-08-17
 

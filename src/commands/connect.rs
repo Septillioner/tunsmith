@@ -3,13 +3,12 @@ use dialoguer::Input;
 
 use crate::cli::SshArgs;
 use crate::constants::DEFAULT_SSH_USER;
-use crate::project::{
-    load_remote_profile, AUTH_TYPE_KEY, AUTH_TYPE_PASSWORD, RemoteProfile,
-};
+use crate::project::{load_remote_profile, RemoteProfile, AUTH_TYPE_KEY, AUTH_TYPE_PASSWORD};
 use crate::ssh::{
     default_ssh_key_path, expand_tilde, parse_ssh_host, prompt_password, RemoteSession, SshAuth,
     SshTarget,
 };
+use crate::style;
 
 pub struct PreparedSsh {
     pub target: SshTarget,
@@ -23,11 +22,11 @@ pub fn prepare_ssh(args: &SshArgs, prompt_if_missing_host: bool) -> Result<Prepa
         if !prompt_if_missing_host {
             anyhow::bail!("SSH host is required");
         }
-        host = Input::new()
+        host = Input::with_theme(&style::theme())
             .with_prompt("Remote server IP/Domain")
             .interact_text()?;
         if args.host.is_none() {
-            user = Input::new()
+            user = Input::with_theme(&style::theme())
                 .with_prompt("SSH user")
                 .default(DEFAULT_SSH_USER.to_string())
                 .interact_text()?;
@@ -36,7 +35,7 @@ pub fn prepare_ssh(args: &SshArgs, prompt_if_missing_host: bool) -> Result<Prepa
 
     let existing_profile = load_remote_profile(&host)?;
     if existing_profile.is_some() {
-        println!("Found existing profile for {host}.");
+        style::info(format!("Found existing profile for {host}."));
     }
 
     let password_auth = args.password
@@ -87,6 +86,9 @@ pub fn prepare_ssh(args: &SshArgs, prompt_if_missing_host: bool) -> Result<Prepa
 }
 
 pub async fn open_session(prepared: &PreparedSsh) -> Result<RemoteSession> {
-    println!("Connecting to {}...", prepared.target.host);
+    style::step(
+        style::STAGE_SSH,
+        format!("Connecting to {}...", prepared.target.host),
+    );
     RemoteSession::open(&prepared.target, &prepared.auth).await
 }

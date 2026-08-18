@@ -28,7 +28,7 @@ cargo run -- --help
 
 Generated profiles target classic OpenVPN 2.x: `tls-crypt`, `dh none`, AES-256-GCM, TLS 1.2+. That is why **2.4+** is the expected floor on both server and client. **2.6** is the recommended line: it is what apt ships on current Debian/Ubuntu LTS, which is what `remote setup` installs.
 
-Nothing in this table has been proven on a live tunnel yet. A row moves to tested only after we actually run it. Recommended is not a test result.
+Proven on a live tunnel: OpenVPN **2.6.19** on the server and OpenVPN Connect **3.8.0** on the client. Other rows stay not tested until we run them. Recommended is independent of that.
 
 - **tested** (`:white_check_mark:`) — we ran this version
 - **not tested** — expected from the config, not proven
@@ -40,9 +40,9 @@ Nothing in this table has been proven on a live tunnel yet. A row moves to teste
 | 2.3 and older | unsupported | unsupported | no `tls-crypt`, no `dh none` |
 | 2.4 | not tested | not tested | expected minimum |
 | 2.5 | not tested | not tested | expected; `--cipher` is deprecated but still accepted |
-| 2.6 (recommended) | not tested | not tested | typical Debian 12 / Ubuntu 24.04 apt |
+| 2.6 (recommended) | :white_check_mark: 2.6.19 | not tested | typical Debian 12 / Ubuntu 24.04 apt |
 | 2.7 | not tested | not tested | expected; current community line |
-| Connect 3.x | n/a | not tested | client-only; `.ovpn` import untested |
+| Connect 3.x | n/a | :white_check_mark: 3.8.0 | client-only |
 
 ## Quick start
 
@@ -50,12 +50,10 @@ Nothing in this table has been proven on a live tunnel yet. A row moves to teste
 tunsmith init --template gateway-vpn
 tunsmith config set --host vpn.example.com
 tunsmith client add laptop
-tunsmith preview ssh root@203.0.113.10
-tunsmith build
 tunsmith remote setup ssh root@203.0.113.10
 ```
 
-`build` writes `dist/server/`, `dist/clients/*.ovpn`, and `dist/build.json`. Default OpenVPN version comes from `preview ssh` (`remotes/<host>.json`); override with `build --openvpn-version X.Y`. Import the `.ovpn` on the client. Full-tunnel (`redirect_gateway`) asks to apply NAT on `remote setup` / `update` (Confirm, default no).
+`remote setup ssh` inspects the host, rebuilds `dist/` from current `tunsmith.json`, and deploys. Standalone `build` is still available (`--openvpn-version` to override). Import `dist/clients/*.ovpn` on the client. Full-tunnel (`redirect_gateway`) asks to apply NAT on `remote setup` / `update` (Confirm, default no).
 
 ## Commands
 
@@ -67,7 +65,7 @@ tunsmith remote setup ssh root@203.0.113.10
 | `build` | Server conf + client profiles into `dist/` (default OpenVPN target from `preview`) |
 | `template` | List `gateway-vpn`, `cloud-vpn`, `gateway-cloud-vpn` |
 | `preview ssh` | SSH in, print host facts, save `remotes/<host>.json` |
-| `remote setup ssh` | Install OpenVPN if needed, upload files, enable systemd |
+| `remote setup ssh` | Inspect, install OpenVPN if needed, rebuild `dist/`, upload, enable systemd |
 | `remote update ssh` | Upload `server.conf` and restart |
 | `remote clean ssh` | Stop the instance and delete its remote files |
 | `remote clean local` | Delete `dist/` |

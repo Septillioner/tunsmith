@@ -9,10 +9,8 @@ const AFTER_HELP: &str = "\
   $ tunsmith init --template gateway-vpn
   $ tunsmith config set --host vpn.example.com
   $ tunsmith client add laptop
-  $ tunsmith preview ssh root@203.0.113.10
-  $ tunsmith build
-  $ tunsmith tui
   $ tunsmith remote setup ssh root@203.0.113.10
+  $ tunsmith tui
 
 Documentation: README.md and docs/security.md
 ";

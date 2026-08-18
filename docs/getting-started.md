@@ -48,7 +48,7 @@ tunsmith build
 
 `preview ssh` writes `remotes/<host>.json` including the remote OpenVPN version. `build` uses that as the default compile target. Override with `build --openvpn-version X.Y` (or `X.Y.Z`). No preview: baseline OpenVPN 2.4. This slice still writes 2.4 syntax (`cipher`, `tls-crypt`, `dh none`).
 
-`build` writes `dist/build.json`, `dist/server/` (OpenVPN server files) and `dist/clients/*.ovpn` (unified client profiles). Import the `.ovpn` in an OpenVPN 2.4+ client.
+`build` writes `dist/build.json`, `dist/server/` (OpenVPN server files) and `dist/clients/*.ovpn` (unified client profiles). Import the `.ovpn` in an OpenVPN 2.4+ client. `remote setup ssh` runs the same compile after apt so the files on the host match current `tunsmith.json`.
 
 To install on a remote host:
 
@@ -56,7 +56,7 @@ To install on a remote host:
 tunsmith remote setup ssh root@203.0.113.10
 ```
 
-That command needs `dist/` already built. After apt it checks the live OpenVPN version against `dist/build.json` and refuses below 2.4. Details: [remote.md](remote.md). Full flag list: [commands.md](commands.md).
+That command rebuilds `dist/` from current `tunsmith.json`, then deploys. After apt it checks the live OpenVPN version against `dist/build.json` and refuses below 2.4. Details: [remote.md](remote.md). Full flag list: [commands.md](commands.md).
 
 ## Files that appear
 

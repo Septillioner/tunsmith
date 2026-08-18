@@ -94,7 +94,7 @@ tunsmith build --host 203.0.113.10 --openvpn-version 2.4.12
 
 Default version is the preview server (`remotes/*.json`). One remote is selected automatically. No remotes: baseline OpenVPN 2.4 on Linux. This slice still emits 2.4 syntax (`cipher`, not `data-ciphers`) for every allowed target.
 
-`remote setup` / `remote update` upload `dist/` unchanged. After OpenVPN is installed they parse the live version and refuse if it cannot run the stamp dialect (below 2.4, or missing OpenVPN). Missing `dist/build.json` is treated as `openvpn-2.4` with a warning.
+`remote setup` / `remote update` upload `dist/` after a version gate. After OpenVPN is installed they parse the live version and refuse if it cannot run the stamp dialect (below 2.4, or missing OpenVPN). Missing `dist/build.json` is treated as `openvpn-2.4` with a warning. `remote setup ssh` runs `build` for that host first (after apt, using the live OpenVPN version). `remote update ssh` does not rebuild.
 
 Issues `pki/server/` material and each missing client cert on first need. Reuses existing PEM files. Paths inside `server.conf` are relative to `/etc/openvpn/server/` (`<instance>/ca.crt`, and so on).
 
@@ -142,11 +142,12 @@ SSH in, print OS / kernel / uptime / CPU / RAM / disk / public IP / local IP / I
 Runs the same discovery as `preview ssh`, then:
 
 1. Installs OpenVPN with apt if missing (Debian/Ubuntu only).
-2. If `redirect_gateway` is set, enables IPv4 forwarding, then asks to apply NAT (UPPERCASE warning; Confirm defaults to no).
-3. Uploads `dist/server/` and enables `openvpn-server@<instance>`.
-4. If you confirmed NAT, installs `tunsmith-nat@<instance>` (MASQUERADE + FORWARD).
+2. Rebuilds `dist/` from current `tunsmith.json` for that host (same as `build --host <HOST>`).
+3. If `redirect_gateway` is set, enables IPv4 forwarding, then asks to apply NAT (UPPERCASE warning; Confirm defaults to no).
+4. Uploads `dist/server/` and enables `openvpn-server@<instance>`.
+5. If you confirmed NAT, installs `tunsmith-nat@<instance>` (MASQUERADE + FORWARD).
 
-Requires `tunsmith.json` and `dist/server/`. `--nat-interface` selects the iface when detection is empty or ambiguous; it does not skip Confirm.
+Requires `tunsmith.json` (and a configured `--host`). `--nat-interface` selects the iface when detection is empty or ambiguous; it does not skip Confirm.
 
 ## `remote update ssh`
 

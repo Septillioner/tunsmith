@@ -3,7 +3,8 @@ use dialoguer::{Confirm, Select};
 use std::fs;
 use std::io::IsTerminal;
 
-use crate::cli::{CleanCommands, RemoteCommands, SshArgs, SshTransport};
+use crate::cli::{BuildArgs, CleanCommands, RemoteCommands, SshArgs, SshTransport};
+use crate::commands::build;
 use crate::commands::preview::connect_and_inspect;
 use crate::constants::{APP_NAME, REMOTE_OPENVPN_SERVER_DIR, SERVER_CONF_NAME};
 use crate::ovpn_target::{can_run_on, load_build_stamp, parse_openvpn_version, BuildStamp};
@@ -35,6 +36,14 @@ async fn setup(args: SshArgs) -> Result<()> {
         .await?;
     style::success("Dependencies satisfied.");
 
+    let live = manager.vpn_version().await;
+    profile.vpn_version = Some(live.clone());
+    save_remote_profile(&profile)?;
+    build::run(BuildArgs {
+        host: Some(profile.host.clone()),
+        openvpn_version: None,
+    })?;
+
     let mut pending_nat_iface = None;
     if cfg.server.redirect_gateway {
         style::step(style::STAGE_NET, "Checking IP forwarding...");
@@ -51,10 +60,9 @@ async fn setup(args: SshArgs) -> Result<()> {
 
     let local_dist = dist_server_dir();
     if !local_dist.is_dir() {
-        bail!("Build files not found. Run \"{APP_NAME} build\" first.");
+        bail!("Build did not write dist/server.");
     }
 
-    let live = manager.vpn_version().await;
     require_deploy_compatible(&live)?;
 
     style::step(style::STAGE_DEPLOY, "Deploying configurations...");

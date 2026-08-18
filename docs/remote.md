@@ -44,7 +44,7 @@ apt-get update && apt-get install -y openvpn
 
 Other distros error with “Unsupported OS … Install OpenVPN manually.” There is an RPM version probe for display; there is no `yum`/`dnf` installer.
 
-**version gate** — after apt, Tunsmith parses live `openvpn --version` and compares it to `dist/build.json`. OpenVPN below 2.4, or not installed, fails. Missing stamp is treated as dialect `openvpn-2.4` with a warning. Configs are not re-rendered over SSH; run `preview ssh` then `build` if the dialect cannot run. `dist/build.json` is not uploaded.
+**version gate** — after apt, Tunsmith rebuilds `dist/` from current `tunsmith.json` for that host, then parses live `openvpn --version` and compares it to `dist/build.json`. OpenVPN below 2.4, or not installed, fails. Missing stamp is treated as dialect `openvpn-2.4` with a warning. `dist/build.json` is not uploaded.
 
 **sysctl** — only when `redirect_gateway` is true in `tunsmith.json`. If `/proc/sys/net/ipv4/ip_forward` is not `1`:
 

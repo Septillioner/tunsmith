@@ -2,7 +2,7 @@
 
 Have an Ubuntu VPS and want your laptop's internet to leave from that box? This is that path. Template: `gateway-vpn` (full tunnel). Not split-tunnel `cloud-vpn`. Not WireGuard. Not a hosted VPN.
 
-This is **0.1.0** alpha. Private keys are written unencrypted. There is no CRL. Read [security.md](security.md) before `remote setup`. OpenVPN 2.4+ is the expected floor; those versions are not proven yet. See the [compatibility table](../README.md#compatibility).
+This is **0.1.0** alpha. Private keys are written unencrypted. There is no CRL. Read [security.md](security.md) before `remote setup`. OpenVPN 2.4+ is the expected floor. Proven pair: server 2.6.19 and Connect 3.8.0. See the [compatibility table](../README.md#compatibility).
 
 ## You need
 
@@ -22,24 +22,15 @@ tunsmith config set --host vpn.example.com
 tunsmith client add laptop
 ```
 
-`--host` is the DNS name or IP that clients will dial. It is also the server certificate SAN. `client add` only records the name; certificates are issued on `build`.
+`--host` is the DNS name or IP that clients will dial. It is also the server certificate SAN. `client add` only records the name; certificates are issued on `build` (including the build that `remote setup` runs).
 
-## 2. Preview, then build
-
-```bash
-tunsmith preview ssh root@203.0.113.10
-tunsmith build
-```
-
-`preview ssh` writes `remotes/<host>.json`, including the remote OpenVPN version. `build` uses that as the compile target and writes `dist/server/`, `dist/clients/laptop.ovpn`, and `dist/build.json`.
-
-## 3. Deploy
+## 2. Deploy
 
 ```bash
 tunsmith remote setup ssh root@203.0.113.10
 ```
 
-That installs OpenVPN if needed, uploads `dist/server/`, enables `openvpn-server@<instance>`, and turns on IPv4 forwarding.
+That inspects the host, installs OpenVPN if needed, rebuilds `dist/` from current `tunsmith.json`, uploads `dist/server/`, enables `openvpn-server@<instance>`, and turns on IPv4 forwarding.
 
 Full tunnel then asks to apply NAT masquerade. The prompt defaults to **no**. Confirm it, or clients reach the VPN subnet and not the internet. If several default IPv4 interfaces (or none), pass the egress NIC; Confirm still runs:
 
@@ -49,13 +40,13 @@ tunsmith remote setup ssh root@203.0.113.10 --nat-interface ens3
 
 No TTY: NAT is skipped. Persistence is `tunsmith-nat@<instance>` plus `nat.sh` on the host. Details: [remote.md](remote.md).
 
-## 4. Firewall
+## 3. Firewall
 
 Tunsmith does not open cloud security groups or UFW. Allow **UDP 1194** (the `gateway-vpn` default) to the VPS.
 
 If UFW is active, NAT can still be applied while `DEFAULT_FORWARD_POLICY=DROP` drops forwarded packets. Tunsmith warns and does not edit `/etc/default/ufw`.
 
-## 5. Connect
+## 4. Connect
 
 Import `dist/clients/laptop.ovpn` in an OpenVPN 2.4+ client. Do not commit that file; it contains the client key.
 

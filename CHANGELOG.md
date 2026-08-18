@@ -12,11 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Public name is Tunsmith (`tunsmith` binary, crate, and `tunsmith.json`)
 - `block-outside-dns` is no longer written into `server.conf`. When enabled, client profiles get `setenv opt block-outside-dns`.
 - CLI output is TTY-aware (respects `NO_COLOR`): status roles, accent labels for build Target/Dialect, and stage prefixes on preview/build/remote.
+- `remote setup ssh` rebuilds `dist/` from current `tunsmith.json` after apt, so NAT and `server.conf` use the same subnet.
 
 ### Added
 
 - `tunsmith tui`: interactive terminal menu for status, init, config, clients, and build (not a web UI; no remote)
-- OpenVPN compatibility table in README (expected 2.4+, recommended 2.6, untested until marked)
+- OpenVPN compatibility table in README (expected 2.4+, recommended 2.6; proven server 2.6.19 and Connect 3.8.0)
 - `build --host` and `build --openvpn-version`: default compile target from `preview` remotes; stamp `dist/build.json`; `remote setup`/`update` refuse OpenVPN below 2.4
 - `remote setup` / `update` can apply full-tunnel NAT after Confirm (default no). `--nat-interface` selects the iface; it does not skip consent.
 - Ubuntu internet VPN walkthrough (`docs/ubuntu-internet-vpn.md`) for the `gateway-vpn` VPS path

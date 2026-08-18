@@ -6,6 +6,12 @@ Requires a Rust toolchain. Remote commands also need a Debian or Ubuntu host wit
 
 ## Install
 
+From [crates.io](https://crates.io/crates/tunsmith):
+
+```bash
+cargo install tunsmith
+```
+
 From a clone of this tree:
 
 ```bash

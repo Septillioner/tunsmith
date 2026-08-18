@@ -6,7 +6,7 @@ This is **0.1.0** alpha. Private keys are written unencrypted. There is no CRL. 
 
 ## You need
 
-- A Rust toolchain on the machine that runs Tunsmith (`cargo install --path .` from this repo)
+- A Rust toolchain on the machine that runs Tunsmith (`cargo install tunsmith`, or `cargo install --path .` from this repo)
 - An Ubuntu host with SSH (default user `root`)
 - An OpenVPN 2.4+ client to import the `.ovpn`
 

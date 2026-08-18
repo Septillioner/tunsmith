@@ -14,6 +14,14 @@ Have an Ubuntu VPS and want your traffic to leave from that box? Follow [Your ow
 
 Requires a Rust toolchain. For `remote` commands: a Debian or Ubuntu host with SSH. OpenVPN 2.4+ is the expected floor on that host (Tunsmith can install the distro package; it does not pin a version). See [Compatibility](#compatibility). No OpenSSL CLI. Keys are RSA + `rcgen`. VPN configs use `dh none`.
 
+From [crates.io](https://crates.io/crates/tunsmith):
+
+```bash
+cargo install tunsmith
+```
+
+From a clone of this tree:
+
 ```bash
 cargo install --path .
 ```

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Published on [crates.io](https://crates.io/crates/tunsmith) (`cargo install tunsmith`)
 - `tunsmith tui`: interactive terminal menu for status, init, config, clients, and build (not a web UI; no remote)
 - OpenVPN compatibility table in README (expected 2.4+, recommended 2.6; proven server 2.6.19 and Connect 3.8.0)
 - `build --host` and `build --openvpn-version`: default compile target from `preview` remotes; stamp `dist/build.json`; `remote setup`/`update` refuse OpenVPN below 2.4

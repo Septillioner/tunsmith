@@ -1,6 +1,6 @@
 # Tunsmith documentation
 
-Tunsmith is a 0.1.0 alpha CLI (AGPL-3.0-only). It generates a local OpenVPN PKI in the current working directory and can deploy it over SSH to Debian or Ubuntu.
+Tunsmith is a 0.1.0 alpha CLI (AGPL-3.0-only). It generates a local OpenVPN PKI in the current working directory and can deploy it over SSH to Debian or Ubuntu. Install from [crates.io](https://crates.io/crates/tunsmith): `cargo install tunsmith`.
 
 | Page | Contents |
 | --- | --- |
